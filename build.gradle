@@ -9,13 +9,23 @@
 apply plugin: 'java'
 apply plugin: 'application'
 
-mainClassName = 'api.gmail.APIConnection'
+mainClassName = 'api.gmail.mail.Inbox'
 sourceCompatibility = 11
 targetCompatibility = 11
 version = '1.0'
 
-sourceSets.main.java.srcDirs = ['src']
-sourceSets.test.java.srcDirs = ['tst']
+sourceSets {
+    main {
+        java {
+            srcDir 'api-connection/src/main/java'
+        }
+    }
+    test {
+       java {
+           srcDir 'api-connection/src/test/java'
+       }
+    }
+}
 
 repositories {
     mavenCentral()
@@ -26,7 +36,7 @@ repositories {
 }
 
 test {
-    useJUnitPlatform();
+    useJUnitPlatform()
 }
 
 dependencies {
