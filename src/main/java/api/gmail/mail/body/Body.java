@@ -1,8 +1,6 @@
 package api.gmail.mail.body;
 
-import com.google.api.services.gmail.model.MessagePart;
-
-import java.util.List;
+import java.util.Map;
 
 /**
  * Part of Mail class.
@@ -14,32 +12,23 @@ public class Body {
      * Contains snippet of the message(possibly will be deleted).
      */
     private final String snippet;
-
+    /**
+     * Contains the MessageParts at the bottom of the payload.
+     */
+    private final Map<Integer, String> parts;
     /**
      * Contains type of the body(possibly will be resolved differently).
      */
     private String type;
 
     /**
-     * Contains the body.
-     */
-    private final String body;
-
-    /**
-     * Contains the MessageParts at the bottom of the payload.
-     */
-    private final List<MessagePart> contents;
-
-    /**
      * Constructor, simple assignment.
      *
-     * @param snippet  String
-     * @param body     String
-     * @param contents List of MessageParts
+     * @param snippet String
+     * @param parts   Map<Integer, String>, integer is the id of the part and String variable contains necessary data.
      */
-    public Body(String snippet, String body, List<MessagePart> contents) {
+    public Body(String snippet, Map<Integer, String> parts) {
         this.snippet = snippet;
-        this.body = body;
-        this.contents = contents;
+        this.parts = parts;
     }
 }

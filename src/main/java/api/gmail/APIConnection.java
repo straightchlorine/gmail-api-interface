@@ -26,13 +26,15 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.security.GeneralSecurityException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * Utility class providing connection to Gmail API services.
- * TODO: reduce data retrieved from the api - quite a bit is simply trivial(cripples the performance)
+ * TODO: try to apply multithreading for both reading from the API and writing locally.
  */
 public class APIConnection {
 
@@ -60,10 +62,6 @@ public class APIConnection {
      * Global user name.
      */
     private static final String USER = "me";
-    /**
-     * Class-wide Gmail API service.
-     */
-    private final Gmail service;
 
     static {
         try {
@@ -72,6 +70,11 @@ public class APIConnection {
             throw new APIConnectionRuntimeException(e);
         }
     }
+
+    /**
+     * Class-wide Gmail API service.
+     */
+    private final Gmail service;
 
     /**
      * Constructor
@@ -91,13 +94,9 @@ public class APIConnection {
      * @return final set of parts
      */
     private static List<MessagePart> getPayloadParts(List<MessagePart> handle) {
-        if (handle == null)
-            return Collections.emptyList();
-        if (handle.get(0).getBody().getData() != null)
-            return handle;
-        if (handle.get(0).getParts() != null)
-            return getPayloadParts(handle.get(0).getParts());
-
+        if (handle == null) return Collections.emptyList();
+        if (handle.get(0).getBody().getData() != null) return handle;
+        if (handle.get(0).getParts() != null) return getPayloadParts(handle.get(0).getParts());
         return Collections.emptyList();
     }
 
@@ -114,34 +113,11 @@ public class APIConnection {
     }
 
     /**
-     * Helper method
-     * <p>
-     * Retrieve contents of the email from the api based on the ID of the particular message.
-     *
-     * @param message basic message object
-     * @return handle on the contents, so extraction of each part of the message is easier
-     */
-    private Message getMessageHandle(Message message) {
-        try {
-            return service
-                    .users()
-                    .messages()
-                    .get(USER, message.getId())
-                    .setFormat("full")
-                    .execute();
-        } catch (IOException e) {
-            throw new APIConnectionRuntimeException(e);
-        }
-    }
-
-    /**
      * Gmail API service object creation
      */
     private static Gmail getService() throws IOException {
         // new authorized api client service
-        return new Gmail.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials())
-                .setApplicationName(APPLICATION_NAME)
-                .build();
+        return new Gmail.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials()).setApplicationName(APPLICATION_NAME).build();
     }
 
     /**
@@ -151,18 +127,29 @@ public class APIConnection {
         // loading the credentials to the program
         logger.log(Level.INFO, ">> loading credentials");
         InputStream in = APIConnection.class.getResourceAsStream("/credentials.json");
-        if (in == null)
-            throw new FileNotFoundException("Resource not found: " + "/credentials.json");
+        if (in == null) throw new FileNotFoundException("Resource not found: " + "/credentials.json");
         // loading the credentials into client secrets
         GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
         logger.log(Level.INFO, ">> loaded credentials into secrets");
-        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-                APIConnection.HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, Collections.singletonList(GmailScopes.MAIL_GOOGLE_COM))
-                .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
-                .setAccessType("offline")
-                .build();
+        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(APIConnection.HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, Collections.singletonList(GmailScopes.MAIL_GOOGLE_COM)).setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH))).setAccessType("offline").build();
         LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
         return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
+    }
+
+    /**
+     * Helper method
+     * <p>
+     * Retrieve contents of the email from the api based on the ID of the particular message.
+     *
+     * @param message basic message object
+     * @return handle on the contents, so extraction of each part of the message is easier
+     */
+    private Message getMessageHandle(Message message) {
+        try {
+            return service.users().messages().get(USER, message.getId()).setFormat("full").execute();
+        } catch (IOException e) {
+            throw new APIConnectionRuntimeException(e);
+        }
     }
 
     /**
@@ -171,9 +158,15 @@ public class APIConnection {
      * @param message basic message object
      * @return List of the headers
      */
-    public List<MessagePartHeader> getHeader(Message message) {
-        Message handle = getMessageHandle(message);
-        return handle.getPayload().getHeaders();
+    public Map<String, String> getSelectedHeaders(Message message) {
+        Map<String, String> selectedHeaders = new HashMap<>();
+
+        for (MessagePartHeader header : getMessageHandle(message).getPayload().getHeaders()) {
+            if (selectedHeaders.size() == 5) break;
+            if (header.getName().equals("Delivered-To|Date|From|To|Subject"))
+                selectedHeaders.put(header.getName(), header.getValue());
+        }
+        return selectedHeaders;
     }
 
     /**
@@ -198,15 +191,7 @@ public class APIConnection {
      * @return String containing the body of the message
      */
     public String getBody(Message message) {
-        Message handle = getMessageHandle(message);
-        String body = decode(handle.getPayload().getBody().getData());
-
-        if (body != null)
-            return body;
-        else {
-            List<MessagePart> parts = getPayloadParts(handle.getPayload().getParts());
-            return decode(parts.get(0).getBody().getData());
-        }
+        return decode(getMessageHandle(message).getPayload().getBody().getData());
     }
 
     /**
@@ -214,12 +199,24 @@ public class APIConnection {
      * <p>
      * It uses the very same method, but returns raw MessagePart
      * instead of decoding the first element of the List.
+     * <p>
+     * Additionally, method reduces the needed data to bear minimum.
      *
      * @param message basic message object
      * @return List of MessageParts objects
      */
-    public List<MessagePart> getParts(Message message) {
-        return getPayloadParts(getMessageHandle(message).getPayload().getParts());
+    public Map<Integer, String> getSelectedParts(Message message) {
+        List<MessagePart> parts = getPayloadParts(getMessageHandle(message).getPayload().getParts());
+        Map<Integer, String> data = new HashMap<>();
+        if (parts != null) {
+            for (MessagePart part : parts) {
+                data.put(parts.indexOf(part), decode(part.getBody().getData()));
+                data.put(parts.indexOf(part), part.getMimeType());
+            }
+        } else {
+            data.put(0, getBody(message));
+        }
+        return data;
     }
 
     /**

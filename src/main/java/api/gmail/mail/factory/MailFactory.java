@@ -21,14 +21,13 @@ public class MailFactory {
     /**
      * Method responsible for creating and filling the Mail object with data.
      *
-     * @param message    basic Message object
+     * @param message    Message object from the API
      * @param connection APIConnection instance
-     * @return new Mail object, containing data from message extracted via connection object.
+     * @return new Mail instance, containing data from message extracted via connection object.
      */
     public Mail getMail(Message message, APIConnection connection) {
-        Headers headers = new Headers(connection.getHeader(message));
-        Body body = new Body(connection.getSnippet(message), connection.getBody(message), connection.getParts(message));
-
+        Headers headers = new Headers(connection.getSelectedHeaders(message));
+        Body body = new Body(connection.getSnippet(message), connection.getSelectedParts(message));
         return new Mail(message.getId(), headers, body);
     }
 }

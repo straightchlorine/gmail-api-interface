@@ -1,13 +1,25 @@
 package api.gmail.mail.headers;
 
-import com.google.api.services.gmail.model.MessagePartHeader;
+import java.util.Map;
 
-import java.util.List;
-
+/**
+ * Class contains selected headers of the message.
+ */
 public class Headers {
-    List<MessagePartHeader> headers;
 
-    public Headers(List<MessagePartHeader> headers) {
+    /**
+     * Map holding the data from the API.
+     * <p>
+     * Map<HeaderName, HeaderValue>
+     */
+    Map<String, String> headers;
+
+    /**
+     * Constructor
+     *
+     * @param headers processed data from the API
+     */
+    public Headers(Map<String, String> headers) {
         this.headers = headers;
     }
 }
