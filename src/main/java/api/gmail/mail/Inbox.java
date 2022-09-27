@@ -52,4 +52,8 @@ public class Inbox {
     public List<Mail> getInbox() {
         return inbox;
     }
+
+    public static void main(String[] args) {
+        Inbox inbox = new Inbox();
+    }
 }

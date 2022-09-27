@@ -17,12 +17,12 @@ version = '1.0'
 sourceSets {
     main {
         java {
-            srcDir 'api-connection/src/main/java'
+            srcDir 'src/main/java'
         }
     }
     test {
        java {
-           srcDir 'api-connection/src/test/java'
+           srcDir 'src/test/java'
        }
     }
 }
@@ -36,7 +36,10 @@ repositories {
 }
 
 test {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        includeEngines 'junit-jupiter'
+    }
+    //useTestNG()
 }
 
 dependencies {
@@ -46,4 +49,5 @@ dependencies {
     implementation 'email-attachments:email-attachments:1.2.4'
     implementation 'javax.mail:mail:1.4.7'
     implementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+    implementation 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
 }

@@ -38,7 +38,7 @@ class APIConnectionTest {
     @DisplayName("message body retrieval")
     void testBodyRetrieval() {
         for (Message message : inbox) {
-            assertNotEquals(null, con.getBody(message));
+            assertNotEquals(null, con.getSelectedParts(message));
         }
     }
 }
