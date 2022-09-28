@@ -31,7 +31,7 @@ public class Inbox {
     /**
      * Final inbox - List of Mail objects.
      */
-    List<Mail> inbox = new ArrayList<>();
+    List<Mail> inboxList = new ArrayList<>();
 
     /**
      * Constructor; setting up the connection and creating initial inbox.
@@ -40,7 +40,8 @@ public class Inbox {
         con = new APIConnection();
         messages = con.getPage();
         for (Message message : messages) {
-            inbox.add(factory.getMail(message, con));
+            inboxList.add(factory.getMail(message, con));
+
         }
     }
 
@@ -49,8 +50,8 @@ public class Inbox {
      *
      * @return list of Mail objects
      */
-    public List<Mail> getInbox() {
-        return inbox;
+    public List<Mail> getInboxList() {
+        return inboxList;
     }
 
     public static void main(String[] args) {

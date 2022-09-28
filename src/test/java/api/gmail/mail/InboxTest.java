@@ -30,6 +30,6 @@ class InboxTest {
     @Test
     @DisplayName("creating local inbox")
     void testLocalInbox() {
-        assertNotEquals(null, inbox.getInbox());
+        assertNotEquals(null, inbox.getInboxList());
     }
 }

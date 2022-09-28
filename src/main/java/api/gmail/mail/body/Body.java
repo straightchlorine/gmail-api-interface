@@ -1,6 +1,7 @@
 package api.gmail.mail.body;
 
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 /**
  * Part of Mail class.
