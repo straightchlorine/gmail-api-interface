@@ -3,6 +3,7 @@ package api.gmail.mail;
 import api.gmail.APIConnection;
 import api.gmail.mail.factory.Mail;
 import api.gmail.mail.factory.MailFactory;
+import api.gmail.mail.factory.concurrent.MailExtractionThreadManager;
 import com.google.api.services.gmail.model.Message;
 
 import java.util.ArrayList;
@@ -39,10 +40,12 @@ public class Inbox {
     public Inbox() {
         con = new APIConnection();
         messages = con.getPage();
-        for (Message message : messages) {
-            inboxList.add(factory.getMail(message, con));
+        MailExtractionThreadManager manager = new MailExtractionThreadManager(messages, con, factory);
+        inboxList = manager.extraction();
 
-        }
+        //for (Message message : messages) {
+        //    inboxList.add(factory.getMail(message, con));
+        //}
     }
 
     /**
