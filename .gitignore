@@ -37,6 +37,78 @@ test-splits/
 /gradle.ipr
 /gradle.iws
 
+# user-specific stuff
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+
+# AWS User-specific
+.idea/**/aws.xml
+
+# generated files
+.idea/**/contentModel.xml
+
+# sensitive
+.idea/**/dataSources/
+.idea/**/dataSources.ids
+.idea/**/dataSources.local.xml
+.idea/**/sqlDataSources.xml
+.idea/**/dynamic.xml
+.idea/**/uiDesigner.xml
+.idea/**/dbnavigator.xml
+
+# gradle
+.idea/**/gradle.xml
+.idea/**/libraries
+
+# gradle and maven with auto-import
+.idea/artifacts
+.idea/compiler.xml
+.idea/jarRepositories.xml
+.idea/modules.xml
+.idea/*.iml
+.idea/modules
+*.iml
+*.ipr
+
+# cmake
+cmake-build-*/
+
+# mongo Explorer plugin
+.idea/**/mongoSettings.xml
+
+# file-based project format
+*.iws
+
+# intellij
+out/
+
+# mpeltonen/sbt-idea plugin
+.idea_modules/
+
+# jira plugin
+atlassian-ide-plugin.xml
+
+# cursive clojure plugin
+.idea/replstate.xml
+
+# sonarlint plugin
+.idea/sonarlint/
+
+# crashlytics plugin (for Android Studio and IntelliJ)
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+# editor-based Rest Client
+.idea/httpRequests
+
+# Android studio 3.1+ serialized cache file
+.idea/caches/build_file_checksums.ser
+
 # resources folder
 /src/main/resources
 
