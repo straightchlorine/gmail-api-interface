@@ -1,0 +1,104 @@
+name: Release
+
+# Release pipeline, triggered by pushing a version tag such as v1.0.0.
+# In order:
+# CI on the tagged commit
+#   -> verify tag
+#     -> build the zip and tar
+#       -> GitHub release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  verify-tag:
+    name: Verify tag
+    needs: [ci]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Verify tag commit is on master
+        run: |
+          git fetch origin master
+          TAG_COMMIT=$(git rev-list -n 1 "$GITHUB_REF")
+          if git merge-base --is-ancestor "$TAG_COMMIT" origin/master; then
+            echo "Tag is on master"
+          else
+            echo "::error::Tag $GITHUB_REF_NAME is not on master" >&2
+            exit 1
+          fi
+
+      - name: Verify tag matches project version
+        run: |
+          PROJECT_VERSION=$(sed -n "s/^version = '\(.*\)'$/\1/p" build.gradle)
+          if [ "v$PROJECT_VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match build.gradle version $PROJECT_VERSION" >&2
+            exit 1
+          fi
+
+  build-dist:
+    name: Build distribution
+    needs: [verify-tag]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - name: Build release distributions
+        run: ./gradlew distZip distTar
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-dists
+          path: build/distributions/
+          if-no-files-found: error
+
+  github-release:
+    name: GitHub release
+    needs: [build-dist]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Retrieve release distributions
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-dists
+          path: dist/
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --notes "Unpack the zip or tar and run bin/gmail-api-interface. Needs JDK 17 or newer and a Google OAuth client file: see the README." \
+            --generate-notes \
+            dist/*
