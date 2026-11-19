@@ -17,8 +17,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /** The sign-in redirect: fixed address, loopback only, and only this run's redirect counts. */
+@Timeout(20) // a receiver that stops answering must fail the test, not hang the build
 class LoopbackReceiverTest {
     final LoopbackReceiver receiver = new LoopbackReceiver();
 
@@ -54,10 +56,31 @@ class LoopbackReceiverTest {
     }
 
     @Test
+    void aStalledConnectionDoesNotHoldUpTheRedirect() throws Exception {
+        receiver.getRedirectUri();
+        try (var stalled = new Socket("127.0.0.1", LoopbackReceiver.PORT)) {
+            stalled.getOutputStream().write("GET /Cal".getBytes()); // a request that never finishes
+            stalled.getOutputStream().flush();
+            assertEquals(200, get("?code=abc&state=" + receiver.state).statusCode());
+            assertEquals("abc", receiver.waitForCode());
+        }
+    }
+
+    @Test
+    void theSignInCountsEvenWhenThePageCannotBeWritten() throws Exception {
+        receiver.getRedirectUri();
+        send("HEAD", "?code=abc&state=" + receiver.state); // a HEAD reply cannot carry the page
+        assertEquals("abc", receiver.waitForCode());
+    }
+
+    @Test
     void nothingButIpv4LoopbackCanConnect() throws Exception {
         receiver.getRedirectUri();
         connect(InetAddress.getByName("127.0.0.1"));
         assertThrows(IOException.class, () -> connect(InetAddress.getByName("::1")));
+        // all of 127.0.0.0/8 is loopback on Linux, so this catches a listener on every address
+        // even on a machine with no other network interface
+        assertThrows(IOException.class, () -> connect(InetAddress.getByName("127.0.0.2")));
         for (NetworkInterface nic : NetworkInterface.networkInterfaces().toList()) {
             for (InetAddress address : nic.inetAddresses().toList()) {
                 if (address.isLoopbackAddress()) continue;
@@ -77,7 +100,14 @@ class LoopbackReceiverTest {
     }
 
     static HttpResponse<String> get(String query) throws Exception {
-        var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:27183/Callback" + query)).build();
+        return send("GET", query);
+    }
+
+    static HttpResponse<String> send(String method, String query) throws Exception {
+        var request =
+                HttpRequest.newBuilder(URI.create("http://127.0.0.1:27183/Callback" + query))
+                        .method(method, HttpRequest.BodyPublishers.noBody())
+                        .build();
         return HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
     }
 

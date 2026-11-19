@@ -21,8 +21,8 @@ import java.util.concurrent.BlockingQueue;
  */
 class LoopbackReceiver implements VerificationCodeReceiver {
     /**
-     * Fixed, the redirect address never changes. Unassigned at IANA and below every OS's ephemeral
-     * range.
+     * Fixed, the redirect address never changes. Unassigned at IANA and below the default
+     * ephemeral ranges of Linux, Windows and macOS.
      */
     static final int PORT = 27183;
 
@@ -40,10 +40,18 @@ class LoopbackReceiver implements VerificationCodeReceiver {
 
     @Override
     public String getRedirectUri() throws IOException {
-        // literal: no name lookup, never IPv6
+        // the IPv4 literal: no name lookup
         var loopback = InetAddress.getByAddress(new byte[] {127, 0, 0, 1});
         server = HttpServer.create(new InetSocketAddress(loopback, PORT), 0);
         server.createContext(PATH, this::handle);
+        // one daemon thread per request: a connection that stalls cannot hold up the real
+        // redirect, and cannot keep the tool from exiting
+        server.setExecutor(
+                request -> {
+                    var thread = new Thread(request, "sign-in-redirect");
+                    thread.setDaemon(true);
+                    thread.start();
+                });
         server.start();
         return "http://127.0.0.1:" + PORT + PATH;
     }
@@ -58,16 +66,20 @@ class LoopbackReceiver implements VerificationCodeReceiver {
             return;
         }
         boolean approved = param(query, "error") == null;
-        reply(
-                exchange,
-                200,
-                approved
-                        ? "gmail-api-interface received the sign-in. You can close this tab and go"
-                                + " back to the terminal."
-                        : "The sign-in was not completed. You can close this tab; the terminal"
-                                + " shows why.");
-        // after the reply: waitForCode returns next, and the server is stopped
-        accepted.offer(query);
+        try {
+            reply(
+                    exchange,
+                    200,
+                    approved
+                            ? "gmail-api-interface received the sign-in. You can close this tab"
+                                    + " and go back to the terminal."
+                            : "The sign-in was not completed. You can close this tab; the"
+                                    + " terminal shows why.");
+        } finally {
+            // after the reply, because waitForCode returns next and the server is stopped;
+            // in finally, so the sign-in still counts if the browser hung up before reading it
+            accepted.offer(query);
+        }
     }
 
     @Override
@@ -85,7 +97,8 @@ class LoopbackReceiver implements VerificationCodeReceiver {
 
     @Override
     public void stop() {
-        if (server != null) server.stop(0); // null when stored tokens made the sign-in unnecessary
+        // null when the sign-in never started: stored tokens were enough, or the port was busy
+        if (server != null) server.stop(0);
     }
 
     /** The decoded value of one query parameter, or null when it is absent. */

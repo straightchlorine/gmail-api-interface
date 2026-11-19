@@ -70,7 +70,7 @@ Download `gmail-api-interface-1.0.0.zip` (or `.tar`) from the
 and unpack it. Then, in the folder you unpacked it into:
 
 ```bash
-alias gmail="$PWD/gmail-api-interface-1.0.0/bin/gmail-api-interface"
+alias gmail="'$PWD/gmail-api-interface-1.0.0/bin/gmail-api-interface'"
 
 gmail                                  # newest 20 inbox messages
 gmail list 50
