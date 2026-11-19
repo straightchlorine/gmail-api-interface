@@ -53,7 +53,8 @@ class GmailClient {
                     protected void onAuthorization(AuthorizationCodeRequestUrl url) {
                         url.setState(receiver.state);
                         System.err.println(
-                                "Open this URL to authorize (Ctrl-C to abort):\n  " + url.build());
+                                "Open this URL to authorize (Ctrl-C to abort):\n  "
+                                        + Terminal.link(Cli.COLOR, url.build()));
                     }
                 }.authorize("user");
         messages =

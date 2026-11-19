@@ -51,6 +51,13 @@ class GmailClientTest {
     }
 
     @Test
+    void theSignInUrlIsOneClickableLinkOnATerminalAndBareOtherwise() {
+        String url = "https://accounts.google.com/o/oauth2/auth?client_id=x&state=y";
+        assertEquals("\033]8;;" + url + "\033\\" + url + "\033]8;;\033\\", Terminal.link(true, url));
+        assertEquals(url, Terminal.link(false, url));
+    }
+
+    @Test
     void setupProblemsShowOnlyTheHintOtherFailuresNameTheException() {
         assertEquals("missing /x/credentials.json; see README > Setup",
                 GmailClient.describe(new GmailClient.SetupException("missing /x/credentials.json")));

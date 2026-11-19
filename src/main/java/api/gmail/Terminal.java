@@ -4,7 +4,7 @@ import java.util.regex.Pattern;
 
 /**
  * What may reach the terminal. Text from strangers (headers, bodies, error messages) goes through a clean method,
- * so the escapes {@link #paint} adds are the only ones printed.
+ * so the escapes {@link #paint} and {@link #link} add are the only ones printed.
  */
 class Terminal {
     static final String NONE = "", BOLD = "1", DIM = "2", YELLOW = "33", CYAN = "36", BOLD_YELLOW = "1;33";
@@ -22,6 +22,14 @@ class Terminal {
     /** Like {@link #clean}, but keeps line breaks and tabs; CRLF becomes LF. */
     static String cleanMultiline(String s) {
         return UNSAFE_CHAR_BUT_NEWLINE_OR_TAB.matcher(s.replace("\r\n", "\n")).replaceAll(" ");
+    }
+
+    /**
+     * Makes url clickable as a whole (an OSC 8 hyperlink) when on. A terminal otherwise finds a bare
+     * URL by its text, which stops working once the URL wraps over several lines inside tmux.
+     */
+    static String link(boolean on, String url) {
+        return on ? "\033]8;;" + url + "\033\\" + url + "\033]8;;\033\\" : url;
     }
 
     /** Wraps s in an ANSI SGR style when on; {@link #NONE} leaves it bare. */
